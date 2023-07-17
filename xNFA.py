@@ -31,6 +31,40 @@ class NFA:
     def add_accept_state(self, state):
         self.accept_states.add(state)
 
+    def is_accepted(self, word: str) -> bool:
+        # Inicializa um conjunto de estados atuais com os estados iniciais do autômato
+        current_states = set(self.initial_states)
+
+        # Loop para processar cada símbolo da palavra
+        for symbol in word:
+            next_states = set()
+
+            # Verifica todas as transições para cada estado atual e símbolo lido
+            for state in current_states:
+                transitions = self.transitions.get((state, symbol), set())
+                next_states.update(transitions)
+
+            # Se não há transições para o símbolo lido, o autômato fica bloqueado
+            if not next_states:
+                return False
+
+            # Atualiza o conjunto de estados atuais para o próximo conjunto de estados
+            current_states = next_states
+
+        # Verifica se algum estado atual é estado de aceitação
+        return bool(current_states & self.accept_states)
+    
+    def display_info(self):
+        print("Estados:", self.states)
+        print("Símbolos do alfabeto:", self.alphabet)
+        print("Estados iniciais:", self.initial_states)
+        print("Estados de aceitação:", self.accept_states)
+        print("Transições:")
+        for state_from, transitions in self.transitions.items():
+            for symbol, states_to in transitions.items():
+                for state_to in states_to:
+                    print(f"{state_from} --({symbol})--> {state_to}")
+
 
 def main():
     # Criar um autômato finito não determinístico (AFN) de exemplo
@@ -65,6 +99,8 @@ def main():
         for symbol, states_to in transitions.items():
             for state_to in states_to:
                 print(f"{state_from} --({symbol})--> {state_to}")
+
+    
                 
 if __name__ == '__main__':
     main()
