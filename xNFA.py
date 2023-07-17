@@ -14,15 +14,19 @@ class NFA:
     def add_state(self, state):
         self.states.add(state)
 
+    def add_states(self, states):
+        for state in states:
+            self.add_state(state)
+
     def add_symbol(self, symbol):
         self.alphabet.add(symbol)
 
-    def add_transition(self, state_from, symbol, state_to):
+    def add_transition(self, state_from, symbol, states_to):
         if state_from not in self.transitions:
             self.transitions[state_from] = {}
         if symbol not in self.transitions[state_from]:
             self.transitions[state_from][symbol] = set()
-        self.transitions[state_from][symbol].add(state_to)
+        self.transitions[state_from][symbol].update(states_to)
 
     # Métodos para definir estados iniciais e de aceitação
     def add_initial_state(self, state):
@@ -31,6 +35,16 @@ class NFA:
     def add_accept_state(self, state):
         self.accept_states.add(state)
 
+    def display_info(self):
+        print("Estados:", self.states)
+        print("Símbolos do alfabeto:", self.alphabet)
+        print("Estados iniciais:", self.initial_states)
+        print("Estados de aceitação:", self.accept_states)
+        print("Transições:")
+        for state_from, transitions in self.transitions.items():
+            for symbol, states_to in transitions.items():
+                for state_to in states_to:
+                    print(f"{state_from} --({symbol})--> {state_to}")
 
 def main():
     # Criar um autômato finito não determinístico (AFN) de exemplo
