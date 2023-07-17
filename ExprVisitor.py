@@ -1,29 +1,33 @@
+# Generated from Expr.g4 by ANTLR 4.13.0
 from antlr4 import *
-from ExprLexer import ExprLexer
-from ExprParser import ExprParser
+if "." in __name__:
+    from .ExprParser import ExprParser
+else:
+    from ExprParser import ExprParser
+
+# This class defines a complete generic visitor for a parse tree produced by ExprParser.
 
 class ExprVisitor(ParseTreeVisitor):
-    def visitAtomic(self, ctx:ExprParser.AtomicContext):
-        if ctx.expr():
-            print("Visiting atomic: (expr)")
-            self.visit(ctx.expr())
-        elif ctx.getText() == '0':
-            print("Visiting atomic: 0")
-        elif ctx.getText() == '1':
-            print("Visiting atomic: 1")
 
+    # Visit a parse tree produced by ExprParser#prog.
+    def visitProg(self, ctx:ExprParser.ProgContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by ExprParser#expr.
     def visitExpr(self, ctx:ExprParser.ExprContext):
-        if ctx.atomic():
-            print("Visiting expr: atomic")
-            self.visit(ctx.atomic())
-        elif ctx.expr():
-            left = ctx.expr(0)
-            right = ctx.expr(1)
-            if ctx.getChild(1).getText() == '.':
-                print("Visiting expr: (expr . expr)")
-            elif ctx.getChild(1).getText() == '|':
-                print("Visiting expr: (expr | expr)")
-            elif ctx.getChild(1).getText() == '*':
-                print("Visiting expr: expr*")
-            self.visit(left)
-            self.visit(right)
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by ExprParser#atomic.
+    def visitAtomic(self, ctx:ExprParser.AtomicContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by ExprParser#symbol.
+    def visitSymbol(self, ctx:ExprParser.SymbolContext):
+        return self.visitChildren(ctx)
+
+
+
+del ExprParser
