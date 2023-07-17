@@ -1,6 +1,7 @@
 from antlr4 import *
 from ExprLexer import ExprLexer
 from ExprParser import ExprParser
+from xNFA import NFA
 from xVisitor import CustomExprVisitor
 
 def main():
@@ -15,10 +16,17 @@ def main():
     tree = parser.prog()
 
     print(tree.toStringTree(recog=parser))
-    
+
     # Criar o objeto ExprVisitor e visitar a árvore sintática
     visitor = CustomExprVisitor()
-    visitor.visit(tree)
+    #visitor.build_afn(tree)
+
+    # Criar AFN para receber o resultado da visita
+    afn = NFA()
+
+    nfa = visitor.build_afn(tree);
+    nfa.display_info()
+
 
 
 if __name__ == '__main__':

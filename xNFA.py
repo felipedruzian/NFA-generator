@@ -27,6 +27,17 @@ class NFA:
     def add_accept_state(self, state):
         self.accept_states.add(state)
 
+    def display_info(self):
+        print("Estados:", self.states)
+        print("Símbolos do alfabeto:", self.alphabet)
+        print("Estados iniciais:", self.initial_states)
+        print("Estados de aceitação:", self.accept_states)
+        print("Transições:")
+        for state_from, transitions in self.transitions.items():
+            for symbol, states_to in transitions.items():
+                for state_to in states_to:
+                    print(f"{state_from} --({symbol})--> {state_to}")
+
 def main():
     # Criar um autômato finito não determinístico (AFN) de exemplo
     nfa = NFA()

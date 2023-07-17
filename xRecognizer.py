@@ -1,6 +1,7 @@
 from antlr4 import *
 from ExprLexer import ExprLexer
 from ExprParser import ExprParser
+from ExprVisitor import ExprVisitor
 
 def main():
     input_string = "((0|1)*)"
@@ -12,6 +13,10 @@ def main():
     # Crie um analisador sintático
     parser = ExprParser(stream)
     tree = parser.prog()
+
+    # Criar o objeto ExprVisitor e visitar a árvore sintática
+    visitor = ExprVisitor()
+    visitor.visit(tree)
 
     print(tree.toStringTree(recog=parser))
 
