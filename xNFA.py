@@ -1,84 +1,135 @@
-from antlr4 import *
-from ExprLexer import ExprLexer
-from ExprParser import ExprParser
+import sys
+
+class State:
+    def __init__(self, state_id, isEnd: bool):
+        self.id = state_id
+        self.isEnd = isEnd
+        self.transition = {}
+        self.epsilonTransitions = []
+
+    def addEpsilonTransition(self, to):
+        self.epsilonTransitions.append(to)
+
+    def addTransition(self, to, symbol):
+        self.transition[symbol] = to
+
 
 class NFA:
-    def __init__(self):
-        self.states = set()           # Conjunto de estados do AFN
-        self.alphabet = set()         # Conjunto de símbolos do alfabeto
-        self.initial_states = set()   # Conjunto de estados iniciais
-        self.accept_states = set()    # Conjunto de estados de aceitação
-        self.transitions = {}         # Dicionário com as transições do AFN
+    def __init__(self, start: State, end: State):
+        self.start = start
+        self.end = end
 
-    # Métodos para adicionar estados, símbolos e transições ao AFN
-    def add_state(self, state):
-        self.states.add(state)
+    def fromEpsilon(self, state_id) -> 'NFA':
+        start = State(state_id, False)
+        end = State(state_id + 1, True)
+        start.addEpsilonTransition(end)
 
-    def add_states(self, states):
-        for state in states:
-            self.add_state(state)
+        return NFA(start, end), state_id + 2
 
-    def add_symbol(self, symbol):
-        self.alphabet.add(symbol)
+    def fromSymbol(self, state_id, symbol) -> 'NFA':
+        start = State(state_id, False)
+        end = State(state_id + 1, True)
+        start.addTransition(end, symbol)
 
-    def add_transition(self, state_from, symbol, states_to):
-        if state_from not in self.transitions:
-            self.transitions[state_from] = {}
-        if symbol not in self.transitions[state_from]:
-            self.transitions[state_from][symbol] = set()
-        self.transitions[state_from][symbol].update(states_to)
+        return NFA(start, end), state_id + 2
 
-    # Métodos para definir estados iniciais e de aceitação
-    def add_initial_state(self, state):
-        self.initial_states.add(state)
+    def concatenate(self, first: 'NFA', second: 'NFA', state_id) -> 'NFA':
+        first.end.addEpsilonTransition(second.start)
+        first.end.isEnd = False
 
-    def add_accept_state(self, state):
-        self.accept_states.add(state)
+        return NFA(first.start, second.end), state_id
 
-    def display_info(self):
-        print("Estados:", self.states)
-        print("Símbolos do alfabeto:", self.alphabet)
-        print("Estados iniciais:", self.initial_states)
-        print("Estados de aceitação:", self.accept_states)
-        print("Transições:")
-        for state_from, transitions in self.transitions.items():
-            for symbol, states_to in transitions.items():
-                for state_to in states_to:
-                    print(f"{state_from} --({symbol})--> {state_to}")
+    def union(self, first: 'NFA', second: 'NFA', state_id) -> 'NFA':
+        start = State(state_id, False)
+        start.addEpsilonTransition(first.start)
+        start.addEpsilonTransition(second.start)
 
-def main():
-    # Criar um autômato finito não determinístico (AFN) de exemplo
-    nfa = NFA()
+        end = State(state_id + 1, True)
+        first.end.addEpsilonTransition(end)
+        first.end.isEnd = False
+        second.end.addEpsilonTransition(end)
+        second.end.isEnd = False
 
-    # Adicionar estados
-    nfa.add_state('q0')
-    nfa.add_state('q1')
-    nfa.add_state('q2')
+        return NFA(start, end), state_id + 2
 
-    # Adicionar símbolos do alfabeto
-    nfa.add_symbol('0')
-    nfa.add_symbol('1')
+    def closure(self, nfa: 'NFA', state_id) -> 'NFA':
+        start = State(state_id, False)
+        end = State(state_id + 1, True)
 
-    # Adicionar estados iniciais e de aceitação
-    nfa.add_initial_state('q0')
-    nfa.add_accept_state('q2')
+        start.addEpsilonTransition(nfa.start)
+        start.addEpsilonTransition(end)
 
-    # Adicionar transições
-    nfa.add_transition('q0', '0', 'q1')
-    nfa.add_transition('q1', '1', 'q2')
-    nfa.add_transition('q2', '0', 'q2')
-    nfa.add_transition('q2', '1', 'q0')
+        nfa.end.addEpsilonTransition(nfa.start)
+        nfa.end.addEpsilonTransition(end)
+        nfa.end.isEnd = False
 
-    # Exibir informações do autômato
-    print("Estados:", nfa.states)
-    print("Símbolos do alfabeto:", nfa.alphabet)
-    print("Estados iniciais:", nfa.initial_states)
-    print("Estados de aceitação:", nfa.accept_states)
-    print("Transições:")
-    for state_from, transitions in nfa.transitions.items():
-        for symbol, states_to in transitions.items():
-            for state_to in states_to:
-                print(f"{state_from} --({symbol})--> {state_to}")
-                
-if __name__ == '__main__':
-    main()
+        return NFA(start, end), state_id + 2
+
+    def toNFA(self, posfixExpr: str) -> 'NFA':
+        if posfixExpr == '':
+            return self.fromEpsilon(1)[0]
+
+        stack = []  # stack dos NFAs
+        state_id = 1
+
+        try:
+            for symb in posfixExpr:
+                if symb == '*':
+                    nfa, state_id = self.closure(stack.pop(), state_id)
+                    stack.append(nfa)
+                elif symb == '|':
+                    right = stack.pop()
+                    left = stack.pop()
+                    nfa, state_id = self.union(left, right, state_id)
+                    stack.append(nfa)
+                elif symb == '.':
+                    right = stack.pop()
+                    left = stack.pop()
+                    nfa, state_id = self.concatenate(left, right, state_id)
+                    stack.append(nfa)
+                else:
+                    nfa, state_id = self.fromSymbol(state_id, symb)
+                    stack.append(nfa)
+
+        except IndexError:
+            # if indexError, then the NFA could not be built correctly
+            sys.stderr.write("Invalid regex pattern.\n")
+            sys.exit(64)
+        else:
+            return stack.pop()
+
+    # Função para imprimir as informações do NFA
+    def print_info(self, output_file):
+        states = {}
+        queue = [self.start]
+        while queue:
+            current_state = queue.pop(0)
+            states[current_state.id] = current_state
+            for _, to_state in current_state.transition.items():
+                if to_state.id not in states and to_state not in queue:
+                    queue.append(to_state)
+            for epsilon_state in current_state.epsilonTransitions:
+                if epsilon_state.id not in states and epsilon_state not in queue:
+                    queue.append(epsilon_state)
+
+        with open(output_file, 'w') as f:
+            f.write("Estados do AFN:\n")
+            for state_id, state in states.items():
+                f.write(f"q{state_id} (Final)\n" if state.isEnd else f"q{state_id}\n")
+
+            f.write("\nEstado Inicial:\n")
+            f.write(f"q{self.start.id}\n")
+
+            f.write("\nEstados Finais:\n")
+            for state_id, state in states.items():
+                if state.isEnd:
+                    f.write(f"q{state_id}\n")
+
+            f.write("\nTransições:\n")
+            for state_id, state in states.items():
+                for symbol, to_state in state.transition.items():
+                    f.write(f"q{state_id} --('{symbol}')--> q{to_state.id}\n")
+
+                for epsilon_state in state.epsilonTransitions:
+                    f.write(f"q{state_id} --(&)--> q{epsilon_state.id}\n")
+
